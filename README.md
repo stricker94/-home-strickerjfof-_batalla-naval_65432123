@@ -113,6 +113,7 @@ La pantalla de victoria muestra para ambos lados (en vs CPU y en PvP):
 - **R** o **clic derecho** — girar barco (colocación)
 - Clic en un barco colocado — quitarlo para recolocarlo
 - Clic — colocar / disparar
+- **Flechas** + **Enter** — moverse por el tablero y colocar / disparar con teclado
 - **Listo** — continuar tras pasar el dispositivo (solo PvP)
 - **Escape** — cerrar efecto teatro
 - HUD — música, SFX, texto grande, pantalla completa

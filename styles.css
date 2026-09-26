@@ -547,6 +547,12 @@ body.large-text #app {
 @media (max-width: 720px) {
   .placement-layout {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  /* En pantallas angostas el tablero va primero y la lista es compacta,
+     para no tener que hacer scroll entre elegir barco y colocarlo */
+  .placement-layout .board-wrap {
+    order: -1;
   }
   .topbar {
     padding-right: 0;
@@ -653,6 +659,17 @@ body.large-text #app {
 .board-wrap {
   display: flex;
   justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .ship-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .ship-list .ship-item {
+    flex: 1 1 130px;
+    padding: 0.5rem 0.6rem;
+  }
 }
 
 .board {

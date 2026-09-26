@@ -977,7 +977,12 @@
       Array.isArray(ships) &&
       ships.length > 0 &&
       ships.every(function (s) {
-        return s && typeof s.id === "string" && typeof s.length === "number" && Array.isArray(s.cells);
+        return (
+          s && typeof s.id === "string" && typeof s.length === "number" && Array.isArray(s.cells) &&
+          s.cells.every(function (c) {
+            return c && c.r >= 0 && c.r < 10 && c.c >= 0 && c.c < 10;
+          })
+        );
       })
     );
   }
@@ -1225,6 +1230,7 @@
             }
             if (onCellHover) {
               cell.addEventListener("mouseenter", function () { onCellHover(rr, cc); });
+              cell.addEventListener("focus", function () { onCellHover(rr, cc); });
             }
           })(r, c);
           if (onCellLeave) {
@@ -1288,6 +1294,7 @@
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "ship-item";
+      btn.setAttribute("role", "listitem");
       var placed = ship.cells.length > 0;
       if (placed) {
         btn.classList.add("placed");
@@ -2076,6 +2083,12 @@
 
     $("#btn-menu").addEventListener("click", function () {
       playSfx("click");
+      if (state.winner !== null && state.phase === "battle") {
+        // La partida ya terminó: mostrar el resultado en vez de perderlo
+        clearGameTimers();
+        showWin();
+        return;
+      }
       var wasPlaying = state.phase === "place" || state.phase === "battle" || state.phase === "handoff";
       resetToStart();
       if (wasPlaying && hasValidSave()) toast("Partida guardada: pulsa Continuar para seguir");
@@ -2100,6 +2113,31 @@
       playSfx("click");
       clearSave();
       resetToStart();
+    });
+
+    // Flechas: moverse entre casillas de un tablero con el teclado
+    document.addEventListener("keydown", function (e) {
+      var dirs = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+      var d = dirs[e.key];
+      var el = e.target;
+      if (!d || !el || !el.classList || !el.classList.contains("cell")) return;
+      var board = el.closest(".board");
+      if (!board) return;
+      e.preventDefault();
+      var n = boardSize();
+      var r = +el.dataset.r;
+      var c = +el.dataset.c;
+      for (var step = 0; step < n; step++) {
+        r += d[0];
+        c += d[1];
+        if (r < 0 || r >= n || c < 0 || c >= n) return;
+        var next = board.querySelector('.cell[data-r="' + r + '"][data-c="' + c + '"]');
+        if (next && next.tabIndex >= 0) {
+          next.focus();
+          if (state.phase === "place") onPlaceHover(r, c);
+          return;
+        }
+      }
     });
 
     document.addEventListener("keydown", function (e) {
