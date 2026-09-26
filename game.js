@@ -976,7 +976,7 @@
     );
   }
 
-  function isValidShipList(ships) {
+  function isValidShipList(ships, n) {
     return (
       Array.isArray(ships) &&
       ships.length > 0 &&
@@ -984,7 +984,7 @@
         return (
           s && typeof s.id === "string" && typeof s.length === "number" && Array.isArray(s.cells) &&
           s.cells.every(function (c) {
-            return c && c.r >= 0 && c.r < 10 && c.c >= 0 && c.c < 10;
+            return c && c.r >= 0 && c.r < n && c.c >= 0 && c.c < n;
           })
         );
       })
@@ -1001,11 +1001,11 @@
       if (data.boardSize !== 8 && data.boardSize !== 10) return null;
       if (!Array.isArray(data.players) || data.players.length !== 2) return null;
       if (data.phase === "place") {
-        if (!data.placing || !isValidShipList(data.placing.ships)) return null;
+        if (!data.placing || !isValidShipList(data.placing.ships, data.boardSize)) return null;
         if (data.placing.playerIndex !== 0 && data.placing.playerIndex !== 1) return null;
       } else if (data.phase === "battle") {
         var okPlayers = data.players.every(function (p) {
-          if (!p || !isValidBoard(p.board, data.boardSize) || !isValidShipList(p.ships)) return false;
+          if (!p || !isValidBoard(p.board, data.boardSize) || !isValidShipList(p.ships, data.boardSize)) return false;
           var ids = p.ships.map(function (s) { return s.id; });
           return p.board.every(function (row) {
             return row.every(function (id) { return id === null || ids.indexOf(id) >= 0; });
@@ -1048,6 +1048,21 @@
         stats: stats,
       };
     });
+    if (data.phase === "battle") {
+      state.players.forEach(function (p, i) {
+        var oppShots = state.players[opponentOf(i)].shots;
+        p.ships.forEach(function (ship) {
+          ship.hits = ship.cells.filter(function (cell) {
+            var sh = oppShots[key(cell.r, cell.c)];
+            return sh === "hit" || sh === "sunk";
+          }).length;
+          ship.sunk = ship.hits >= ship.length;
+        });
+        if (p.ships.every(function (ship) { return ship.sunk; })) {
+          throw new Error("Partida guardada ya terminada");
+        }
+      });
+    }
     state.winner = null;
     state.turnCount = data.turnCount || 0;
     state.battle.awaitingHandoff = false;
@@ -1060,13 +1075,21 @@
       ["miss", "hit", "sunk"].indexOf(ls.result) >= 0
         ? ls
         : null;
+    if (state.battle.lastShot && ls.result !== "miss" && typeof ls.shipName !== "string") {
+      state.battle.lastShot.shipName = "barco";
+    }
 
     if (data.phase === "place") {
       state.placing = data.placing;
       delete state.placing.confirmed;
-      if (typeof state.placing.occupied !== "object" || !state.placing.occupied) {
-        state.placing.occupied = {};
-      }
+      // Reconstruye las casillas ocupadas a partir de los barcos guardados
+      state.placing.occupied = {};
+      state.placing.ships.forEach(function (ship) {
+        ship.cells.forEach(function (cell) {
+          state.placing.occupied[key(cell.r, cell.c)] = ship.id;
+        });
+      });
+      if (["H", "V"].indexOf(state.placing.orientation) < 0) state.placing.orientation = "H";
       var resumePlacement = function () {
         placePreview = { cells: null, valid: false };
         lastHover = null;
