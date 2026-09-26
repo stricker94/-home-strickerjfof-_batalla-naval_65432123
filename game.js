@@ -47,6 +47,7 @@
   const prefs = {
     name1: "",
     name2: "",
+    cpuName: "",
     mode: "pvp",
     difficulty: "easy",
     boardMode: "normal",
@@ -82,6 +83,7 @@
     if (["cyan", "teal", "azure"].indexOf(prefs.theme) < 0) prefs.theme = "cyan";
     prefs.name1 = typeof prefs.name1 === "string" ? prefs.name1.slice(0, 20) : "";
     prefs.name2 = typeof prefs.name2 === "string" ? prefs.name2.slice(0, 20) : "";
+    prefs.cpuName = typeof prefs.cpuName === "string" ? prefs.cpuName.slice(0, 20) : "";
     ["spacing", "mute", "music", "largeText"].forEach(function (k) { prefs[k] = !!prefs[k]; });
   }
 
@@ -129,6 +131,7 @@
       attacker: 0,
       awaitingHandoff: false,
       lastResult: null,
+      lastShot: null,
       inputLocked: false,
     },
     winner: null,
@@ -945,6 +948,7 @@
       battle: {
         attacker: state.battle.attacker,
         lastResult: state.battle.lastResult,
+        lastShot: state.battle.lastShot,
       },
       winner: state.winner,
       turnCount: state.turnCount,
@@ -1050,6 +1054,12 @@
     state.battle.inputLocked = false;
     state.battle.attacker = data.battle && data.battle.attacker === 1 ? 1 : 0;
     state.battle.lastResult = null;
+    var ls = data.battle && data.battle.lastShot;
+    state.battle.lastShot =
+      ls && (ls.by === 0 || ls.by === 1) && inBoard(ls.r, ls.c) &&
+      ["miss", "hit", "sunk"].indexOf(ls.result) >= 0
+        ? ls
+        : null;
 
     if (data.phase === "place") {
       state.placing = data.placing;
@@ -1143,6 +1153,9 @@
     var onCellClick = options.onCellClick;
     var onCellHover = options.onCellHover;
     var onCellLeave = options.onCellLeave;
+    var markCell = options.markCell;
+    var shipNames = {};
+    fleetTemplate().forEach(function (s) { shipNames[s.id] = s.name; });
     var n = boardSize();
     var letters = cols();
 
@@ -1197,22 +1210,34 @@
           }
         }
 
+        var shotState = shots && shots[k];
+        var stateText = { miss: "agua", hit: "tocado", sunk: "hundido" }[shotState] || "";
+
         if (mode === "own") {
           if (occupied && occupied[k]) {
             cell.classList.add("ship");
             cell.style.setProperty("--ship-color", companyColor(occupied[k]));
           }
-          if (shots && shots[k] === "miss") cell.classList.add("miss");
-          if (shots && (shots[k] === "hit" || shots[k] === "sunk")) {
+          if (shotState === "miss") cell.classList.add("miss");
+          if (shotState === "hit" || shotState === "sunk") {
             cell.classList.add("hit");
-            if (shots[k] === "sunk") cell.classList.add("sunk");
+            if (shotState === "sunk") cell.classList.add("sunk");
           }
+          if (markCell && markCell.r === r && markCell.c === c) {
+            cell.classList.add("last-shot");
+            stateText += (stateText ? ", " : "") + "último disparo rival";
+          }
+          var ownParts = [letters[c] + (r + 1)];
+          if (occupied && occupied[k]) ownParts.push(shipNames[occupied[k]] || "barco");
+          if (stateText) ownParts.push(stateText);
+          cell.setAttribute("aria-label", ownParts.join(", "));
         }
 
         if (mode === "enemy") {
-          if (shots && shots[k] === "miss") cell.classList.add("miss");
-          if (shots && shots[k] === "hit") cell.classList.add("hit");
-          if (shots && shots[k] === "sunk") cell.classList.add("hit", "sunk");
+          if (shotState === "miss") cell.classList.add("miss");
+          if (shotState === "hit") cell.classList.add("hit");
+          if (shotState === "sunk") cell.classList.add("hit", "sunk");
+          cell.setAttribute("aria-label", letters[c] + (r + 1) + ", " + (stateText || "sin disparar"));
         }
 
         if (interactive && !(shots && shots[k])) {
@@ -1503,6 +1528,7 @@
       occupied: ownOccupied,
       shots: state.players[defender].shots,
       interactive: false,
+      markCell: lastEnemyShotOn(attackerIndex),
     });
     buildBoard($("#enemy-board"), {
       mode: "enemy",
@@ -1528,6 +1554,7 @@
       occupied: ownOccupied,
       shots: state.players[cpu].shots,
       interactive: false,
+      markCell: lastEnemyShotOn(human),
     });
     buildBoard($("#enemy-board"), {
       mode: "enemy",
@@ -1544,6 +1571,7 @@
     state.battle.awaitingHandoff = false;
     state.battle.inputLocked = false;
     state.battle.lastResult = null;
+    state.battle.lastShot = null;
     state.turnCount = 0;
     showBattleFor(0);
     saveGame();
@@ -1571,10 +1599,11 @@
       $("#own-board-label").textContent = "Tu flota (" + state.players[human].name + ")";
       $("#own-fleet-label").textContent = "Tu flota";
       $("#enemy-fleet-label").textContent = "Flota de " + state.players[cpu].name;
-      log.textContent = state.battle.lastResult
-        ? state.battle.lastResult
-        : attacker.isCpu
-          ? "Esperando disparo de la CPU…"
+      var cpuNote = attacker.isCpu ? null : opponentShotNote(attackerIndex);
+      log.textContent = attacker.isCpu
+        ? "Esperando disparo de la CPU…"
+        : cpuNote
+          ? cpuNote + " Tu turno: elige una casilla."
           : "Elige una casilla para atacar.";
       renderCpuHumanView(!attacker.isCpu);
     } else {
@@ -1585,17 +1614,47 @@
       $("#own-board-label").textContent = "Tu flota (" + attacker.name + ")";
       $("#own-fleet-label").textContent = "Tu flota";
       $("#enemy-fleet-label").textContent = "Flota de " + defender.name;
-      log.textContent = state.battle.lastResult
-        ? state.battle.lastResult
+      var pvpNote = opponentShotNote(attackerIndex);
+      log.textContent = pvpNote
+        ? pvpNote + " Tu turno: elige una casilla."
         : "Elige una casilla para atacar.";
       renderPvpBoards(attackerIndex);
     }
+  }
+
+  function coordLabel(r, c) {
+    return cols()[c] + (r + 1);
+  }
+
+  // Resumen del último disparo del rival, visto por quien juega ahora
+  function opponentShotNote(viewerIndex) {
+    var ls = state.battle.lastShot;
+    if (!ls || ls.by === viewerIndex) return null;
+    var who = state.players[ls.by].name;
+    var where = coordLabel(ls.r, ls.c);
+    if (ls.result === "miss") return who + " disparó a " + where + ": agua.";
+    if (ls.result === "sunk") return who + " disparó a " + where + " y hundió tu " + ls.shipName + ".";
+    return who + " disparó a " + where + " y tocó tu " + ls.shipName + ".";
+  }
+
+  // Casilla del tablero propio donde cayó el último disparo del rival
+  function lastEnemyShotOn(viewerIndex) {
+    var ls = state.battle.lastShot;
+    if (!ls || ls.by === viewerIndex) return null;
+    return { r: ls.r, c: ls.c };
   }
 
   function applyShotFeedback(attacker, result) {
     var letters = cols();
     var r = result.cell.r;
     var c = result.cell.c;
+    state.battle.lastShot = {
+      by: attacker,
+      r: r,
+      c: c,
+      result: result.result,
+      shipName: result.shipName || null,
+    };
     var coord = letters[c] + (r + 1);
     var log = $("#battle-log");
     log.className = "battle-log";
@@ -1786,7 +1845,9 @@
     prefs.theme = theme;
     prefs.spacing = spacing;
     prefs.name1 = n1;
-    prefs.name2 = n2;
+    // El nombre del Jugador 2 y el de la CPU se recuerdan por separado
+    if (mode === "cpu") prefs.cpuName = n2;
+    else prefs.name2 = n2;
     savePrefs();
     applyTheme(theme);
 
@@ -1907,7 +1968,7 @@
     if (themeInput) themeInput.checked = true;
     $("#opt-spacing").checked = !!prefs.spacing;
     $("#name-p1").value = prefs.name1 || "";
-    $("#name-p2").value = prefs.name2 || "";
+    $("#name-p2").value = (prefs.mode === "cpu" ? prefs.cpuName : prefs.name2) || "";
     applyTheme(prefs.theme);
     updateModeUI();
     renderFleetPreview();
@@ -1923,7 +1984,7 @@
       var input = $("#name-p2");
       if (mode === "cpu") {
         labelP2.firstChild.textContent = "Nombre CPU (opcional) ";
-        if (input && !input.value) input.placeholder = "CPU";
+        if (input) input.placeholder = "CPU";
       } else {
         labelP2.firstChild.textContent = "Jugador 2 ";
         if (input) input.placeholder = "Capitán 2";
@@ -1954,8 +2015,14 @@
 
     document.querySelectorAll('input[name="game-mode"]').forEach(function (el) {
       el.addEventListener("change", function () {
-        updateModeUI();
+        // Guarda el nombre del modo anterior y carga el del nuevo
+        var input = $("#name-p2");
+        var current = input.value.trim();
+        if (prefs.mode === "cpu") prefs.cpuName = current;
+        else prefs.name2 = current;
         prefs.mode = el.value;
+        input.value = (prefs.mode === "cpu" ? prefs.cpuName : prefs.name2) || "";
+        updateModeUI();
         savePrefs();
       });
     });

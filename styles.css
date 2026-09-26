@@ -1273,12 +1273,26 @@ body.large-text .cell {
   border-radius: 6px;
 }
 
+/* Último disparo del rival sobre tu tablero */
+.cell.last-shot {
+  outline: 2px solid #fbbf24;
+  outline-offset: 1px;
+  z-index: 2;
+  animation: lastShotPulse 1.2s ease-out 2;
+}
+
+@keyframes lastShotPulse {
+  0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+  100% { box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); }
+}
+
 /* Prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .cell.anim-splash,
   .cell.anim-boom,
   .cell.anim-sunk-glow,
   .cell.theater-ship,
+  .cell.last-shot,
   .sunk-banner.show,
   .win-card.celebrate,
   .win-confetti span,
