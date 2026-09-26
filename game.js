@@ -173,13 +173,14 @@
   function companyColor(id) { return COMPANY_COLORS[id] || "#67e8f9"; }
 
   function showScreen(name) {
+    var changed = !screens[name].classList.contains("active");
     Object.values(screens).forEach(function (el) { el.classList.remove("active"); });
     screens[name].classList.add("active");
     state.phase = name === "placement" ? "place" : name;
     showHud(true);
     var menuBtn = $("#btn-menu");
     if (menuBtn) menuBtn.hidden = name === "start";
-    window.scrollTo(0, 0);
+    if (changed) window.scrollTo(0, 0);
   }
 
   function showHud(visible) {
@@ -995,7 +996,11 @@
         if (data.placing.playerIndex !== 0 && data.placing.playerIndex !== 1) return null;
       } else if (data.phase === "battle") {
         var okPlayers = data.players.every(function (p) {
-          return p && isValidBoard(p.board, data.boardSize) && isValidShipList(p.ships);
+          if (!p || !isValidBoard(p.board, data.boardSize) || !isValidShipList(p.ships)) return false;
+          var ids = p.ships.map(function (s) { return s.id; });
+          return p.board.every(function (row) {
+            return row.every(function (id) { return id === null || ids.indexOf(id) >= 0; });
+          });
         });
         if (!okPlayers) return null;
       } else {
@@ -1043,6 +1048,7 @@
 
     if (data.phase === "place") {
       state.placing = data.placing;
+      delete state.placing.confirmed;
       if (typeof state.placing.occupied !== "object" || !state.placing.occupied) {
         state.placing.occupied = {};
       }
@@ -1318,7 +1324,9 @@
           pickUpShip(ship.id);
           return;
         }
+        if (placementLocked()) return;
         state.placing.selectedShipId = ship.id;
+        placePreview = lastHover ? computePreview(lastHover.r, lastHover.c) : { cells: null, valid: false };
         renderPlacement();
       });
       list.appendChild(btn);
@@ -1371,7 +1379,13 @@
     return { cells: cells, valid: canPlace(cells, state.placing.occupied, null) };
   }
 
+  // Tras confirmar la flota ya no se puede tocar la colocación
+  function placementLocked() {
+    return state.phase !== "place" || !!state.placing.confirmed;
+  }
+
   function onPlaceHover(r, c) {
+    if (placementLocked()) return;
     lastHover = { r: r, c: c };
     placePreview = computePreview(r, c);
     paintPlacementPreview();
@@ -1384,6 +1398,7 @@
 
   // Quita un barco ya colocado y lo deja seleccionado para recolocarlo
   function pickUpShip(shipId) {
+    if (placementLocked()) return;
     var ship = state.placing.ships.find(function (s) { return s.id === shipId; });
     if (!ship || !ship.cells.length) return;
     state.placing.orientation = shipOrientation(ship);
@@ -1396,6 +1411,7 @@
   }
 
   function onPlaceClick(r, c) {
+    if (placementLocked()) return;
     var occupant = state.placing.occupied[key(r, c)];
     if (occupant) {
       pickUpShip(occupant);
@@ -1425,6 +1441,7 @@
   }
 
   function toggleOrientation() {
+    if (placementLocked()) return;
     state.placing.orientation = state.placing.orientation === "H" ? "V" : "H";
     toast(
       state.placing.orientation === "H" ? "Orientación: horizontal" : "Orientación: vertical",
@@ -1807,14 +1824,17 @@
   }
 
   function onConfirmPlacement() {
-    if (state.phase !== "place" || !allShipsPlaced()) return;
+    if (state.phase !== "place" || state.placing.confirmed || !allShipsPlaced()) return;
     $("#btn-confirm-placement").disabled = true;
     var idx = state.placing.playerIndex;
     commitPlacement(idx);
     saveGame();
+    state.placing.confirmed = true;
 
     if (isCpuMode()) {
+      var humanPlacing = state.placing;
       placeFleetRandomForPlayer(1);
+      state.placing = humanPlacing;
       toast("La CPU colocó su flota");
       later(function () { startBattle(); }, 400);
       return;
@@ -1971,7 +1991,13 @@
         updateContinueUI();
         return;
       }
-      applySave(data);
+      try {
+        applySave(data);
+      } catch (e) {
+        clearSave();
+        resetToStart();
+        toast("La partida guardada estaba dañada; empieza una nueva");
+      }
     });
 
     $("#btn-new-game").addEventListener("click", function () {
@@ -2022,7 +2048,7 @@
     });
 
     $("#btn-random").addEventListener("click", function () {
-      if (state.phase !== "place") return;
+      if (placementLocked()) return;
       playSfx("place");
       var ok = randomPlaceAll();
       placePreview = { cells: null, valid: false };
