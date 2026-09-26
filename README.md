@@ -2,7 +2,7 @@
 
 Juego clásico de **Batalla Naval** con flotas de **7 empresas**. Interfaz en español (México).
 
-Modos: **2 jugadores** (pass-and-play en el mismo dispositivo) u **vs CPU** (Fácil / Medio / Difícil).
+Modos: **2 jugadores** (pass-and-play en el mismo dispositivo) o **vs CPU** (Fácil / Medio / Difícil).
 
 No requiere instalación ni npm: solo HTML, CSS y JavaScript. Funciona **sin conexión** (doble clic en `index.html`).
 
@@ -26,16 +26,16 @@ Las tipografías de Google Fonts requieren red la primera vez; sin internet se u
 | Opción | Descripción |
 |--------|-------------|
 | **Modo** | `2 jugadores` (hot-seat con pantallas de privacidad) o `vs CPU` |
-| **Dificultad CPU** | Fácil (casi aleatorio), Medio (caza adyacente tras un tocado), Difícil (bloqueo de dirección + ligera conciencia de espaciado; **no hace trampa**) |
+| **Dificultad CPU** | Fácil (casi aleatorio), Medio (caza adyacente tras un tocado), Difícil (sigue la línea de impactos, calcula dónde es más probable que haya barcos y respeta la regla de separación; **no hace trampa**: solo usa lo que vería un jugador) |
 | **Partida** | **Normal** 10×10 (flota completa) o **Rápida** 8×8 (longitudes reducidas) |
 | **Barcos separados** | Si está activo, los barcos no pueden tocarse ni en diagonal (mín. 1 casilla libre alrededor) |
 | **Acento del tema** | Cian / Turquesa / Azul (se recuerda) |
 | **Nombres** | Jugador 1 y Jugador 2 (o nombre de la CPU) |
 
-Preferencias recordadas en `localStorage`: nombres, modo, dificultad, tamaño, separación, silencio, música, texto grande y tema.
+Preferencias recordadas en `localStorage`: nombres (el del Jugador 2 y el de la CPU por separado), modo, dificultad, tamaño, separación, silencio, música, texto grande y tema.
 
 ### Continuar / Nueva partida
-Si hay una partida guardada válida aparece **Continuar partida**. **Nueva partida** borra el guardado y muestra el formulario. El juego auto-guarda tras colocar flotas y tras cada disparo; el guardado se limpia al ganar o al elegir nueva partida / inicio.
+Si hay una partida guardada válida aparece **Continuar partida**. **Nueva partida** borra el guardado y muestra el formulario. El juego auto-guarda tras colocar flotas y tras cada disparo (ya con el turno del rival, así recargar la página no regala un disparo extra); el guardado se limpia al ganar o al elegir nueva partida / inicio. En 2 jugadores, al continuar aparece primero la pantalla de privacidad.
 
 ## Cómo jugar
 
@@ -44,11 +44,14 @@ Si hay una partida guardada válida aparece **Continuar partida**. **Nueva parti
 2. Coloca tu flota (o **Aleatorio**) → **Confirmar flota**. La CPU coloca la suya al azar (respetando la separación si aplica).
 3. Ves **ambos tableros** siempre (sin handoff). Disparas; la CPU responde con un breve retraso.
 
+Durante la colocación puedes hacer clic en un barco ya colocado (en el tablero o en la lista) para quitarlo y recolocarlo.
+
 ### 2 jugadores
 1. Pantalla de privacidad → Jugador 1 coloca → pasa el dispositivo → Jugador 2 coloca.
 2. Batalla con handoff tras cada disparo.
 
 ### Controles de partida (HUD superior derecho)
+- **Menú** — vuelve al inicio sin perder la partida (aparece **Continuar partida**).
 - **Música** — ambiente suave generado (por defecto off). Independiente de los SFX.
 - **Sonido / Silencio** — efectos (agua, tocado, hundido, victoria, clics).
 - **Texto** — tipografía más grande (cómodo en portátil / pass-and-play).
@@ -60,6 +63,7 @@ Si hay una partida guardada válida aparece **Continuar partida**. **Nueva parti
 - Con **Barcos separados**: tampoco pueden compartir vecindad (incluye diagonales).
 - Un disparo por turno: **Agua**, **Tocado** o **Hundido** (se anuncia la empresa).
 - Gana quien hunda toda la flota rival.
+- Al empezar tu turno verás dónde disparó el rival (mensaje + casilla marcada en dorado en tu tablero).
 - Al hundir: banner «¡Hundiste X!» + breve modo teatro (zoom/pulso ~1 s; se puede saltar con la siguiente acción o Escape).
 
 ## Flotas
@@ -107,8 +111,10 @@ La pantalla de victoria muestra para ambos lados (en vs CPU y en PvP):
 
 ## Controles rápidos
 
-- **R** — girar barco (colocación)
+- **R** o **clic derecho** — girar barco (colocación)
+- Clic en un barco colocado — quitarlo para recolocarlo
 - Clic — colocar / disparar
+- **Flechas** + **Enter** — moverse por el tablero y colocar / disparar con teclado
 - **Listo** — continuar tras pasar el dispositivo (solo PvP)
 - **Escape** — cerrar efecto teatro
 - HUD — música, SFX, texto grande, pantalla completa

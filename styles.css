@@ -109,8 +109,24 @@ body {
   min-height: 100dvh;
 }
 
+/* Deja sitio para los controles fijos (HUD) para que no tapen el encabezado */
+#app {
+  padding-top: 3.75rem;
+}
+
+@media (max-width: 560px) {
+  #app {
+    padding-top: 5.75rem;
+  }
+}
+
 body.large-text #app {
   max-width: 1180px;
+}
+
+/* El atributo hidden debe ganar a cualquier display de clase */
+[hidden] {
+  display: none !important;
 }
 
 /* Screens */
@@ -531,6 +547,12 @@ body.large-text #app {
 @media (max-width: 720px) {
   .placement-layout {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  /* En pantallas angostas el tablero va primero y la lista es compacta,
+     para no tener que hacer scroll entre elegir barco y colocarlo */
+  .placement-layout .board-wrap {
+    order: -1;
   }
   .topbar {
     padding-right: 0;
@@ -586,8 +608,12 @@ body.large-text #app {
 
 .ship-item.placed {
   opacity: 0.45;
-  cursor: default;
+  cursor: pointer;
   text-decoration: line-through;
+}
+
+.ship-item.placed:hover {
+  opacity: 0.75;
 }
 
 .ship-item .ship-name-row {
@@ -633,6 +659,17 @@ body.large-text #app {
 .board-wrap {
   display: flex;
   justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .ship-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .ship-list .ship-item {
+    flex: 1 1 130px;
+    padding: 0.5rem 0.6rem;
+  }
 }
 
 .board {
@@ -1007,7 +1044,7 @@ input:focus-visible,
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.35rem;
-  max-width: min(100vw - 1.5rem, 280px);
+  max-width: min(100vw - 1.5rem, 460px);
 }
 
 .hud-controls[hidden] {
@@ -1236,12 +1273,26 @@ body.large-text .cell {
   border-radius: 6px;
 }
 
+/* Último disparo del rival sobre tu tablero */
+.cell.last-shot {
+  outline: 2px solid #fbbf24;
+  outline-offset: 1px;
+  z-index: 2;
+  animation: lastShotPulse 1.2s ease-out 2;
+}
+
+@keyframes lastShotPulse {
+  0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+  100% { box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); }
+}
+
 /* Prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .cell.anim-splash,
   .cell.anim-boom,
   .cell.anim-sunk-glow,
   .cell.theater-ship,
+  .cell.last-shot,
   .sunk-banner.show,
   .win-card.celebrate,
   .win-confetti span,

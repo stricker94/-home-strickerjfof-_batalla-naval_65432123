@@ -19,7 +19,7 @@
         <div class="logo">
           <span class="logo-icon">⚓</span>
           <h1>Batalla Naval</h1>
-          <p class="tagline">Flotas corporativas · mismo dispositivo u vs CPU</p>
+          <p class="tagline">Flotas corporativas · mismo dispositivo o vs CPU</p>
         </div>
 
         <div id="continue-row" class="continue-row" hidden>
@@ -131,7 +131,7 @@
           <p id="placement-subtitle" class="subtitle"></p>
         </div>
         <div class="topbar-actions">
-          <button type="button" id="btn-rotate" class="btn btn-secondary" title="Tecla R">↻ Girar (R)</button>
+          <button type="button" id="btn-rotate" class="btn btn-secondary" title="Tecla R o clic derecho">↻ Girar (R)</button>
           <button type="button" id="btn-random" class="btn btn-ghost">Aleatorio</button>
         </div>
       </header>
@@ -139,7 +139,7 @@
       <div class="placement-layout">
         <aside class="fleet-panel">
           <h3>Barcos restantes</h3>
-          <ul id="ship-list" class="ship-list"></ul>
+          <div id="ship-list" class="ship-list" role="list"></div>
           <p class="hint" id="placement-hint">Selecciona un barco, gira si hace falta y haz clic en el tablero. No se pueden solapar.</p>
         </aside>
         <div class="board-wrap">
@@ -207,6 +207,10 @@
   <div id="theater-overlay" class="theater-overlay" hidden aria-hidden="true"></div>
 
   <div id="hud-controls" class="hud-controls" hidden>
+    <button type="button" id="btn-menu" class="btn-hud" title="Volver al menú (la partida queda guardada)" hidden>
+      <span class="hud-icon" aria-hidden="true">☰</span>
+      <span class="hud-label">Menú</span>
+    </button>
     <button type="button" id="btn-music" class="btn-hud" aria-pressed="false" title="Música de fondo">
       <span class="hud-icon" aria-hidden="true">🎵</span>
       <span class="hud-label">Música</span>
